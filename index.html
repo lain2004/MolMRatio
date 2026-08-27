@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>摩尔质量 · 元素质量计算器</title>
+<style>
+  :root{
+    --purple:#8E7FB8;
+    --purple-deep:#6E5D9E;
+    --purple-ink:#4A4166;
+    --purple-faint:#F1EEF7;
+    --green:#A2C9AE;
+    --green-deep:#7FAF90;
+    --green-faint:#EDF4EF;
+    --grad:linear-gradient(135deg,#8E7FB8 0%,#96A3BE 50%,#A2C9AE 100%);
+    --bg:#F6F4F9;
+    --card:#FFFFFF;
+    --line:#E5E0EF;
+    --text:#3B3552;
+    --muted:#8B84A3;
+    --danger:#C96A6A;
+    --danger-bg:#FBEDED;
+    --radius:16px;
+    --shadow:0 6px 24px rgba(142,127,184,.12);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    font-family:"Microsoft YaHei UI","Microsoft YaHei","PingFang SC","Segoe UI",system-ui,sans-serif;
+    background:
+      radial-gradient(600px 300px at 8% -4%, rgba(162,201,174,.18), transparent 60%),
+      radial-gradient(700px 340px at 96% 0%, rgba(142,127,184,.16), transparent 60%),
+      var(--bg);
+    color:var(--text);
+    line-height:1.6;
+    padding:28px 18px 40px;
+  }
+  .app{max-width:1080px;margin:0 auto}
+
+  /* ---------- 顶部横幅 ---------- */
+  .hero{
+    background:var(--grad);
+    color:#fff;
+    border-radius:var(--radius);
+    padding:26px 30px;
+    display:flex;align-items:center;gap:20px;
+    box-shadow:var(--shadow);
+    position:relative;overflow:hidden;
+  }
+  .hero::after{
+    content:"";position:absolute;right:-40px;top:-60px;
+    width:220px;height:220px;border-radius:50%;
+    background:rgba(255,255,255,.12);
+  }
+  .hero::before{
+    content:"";position:absolute;right:70px;bottom:-90px;
+    width:180px;height:180px;border-radius:50%;
+    background:rgba(255,255,255,.10);
+  }
+  .hero-icon{
+    flex:0 0 auto;width:64px;height:64px;border-radius:18px;
+    background:rgba(255,255,255,.18);
+    display:flex;align-items:center;justify-content:center;
+    backdrop-filter:blur(2px);
+    position:relative;z-index:1;
+  }
+  .hero h1{font-size:1.45rem;letter-spacing:.5px;position:relative;z-index:1}
+  .hero-sub{font-size:.88rem;opacity:.92;margin-top:4px;position:relative;z-index:1}
+
+  /* ---------- 双栏布局 ---------- */
+  .grid{
+    display:grid;grid-template-columns:minmax(340px,5fr) minmax(360px,6fr);
+    gap:20px;margin-top:20px;align-items:start;
+  }
+  .card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:22px 24px;
+  }
+  .card-title{
+    font-size:1.02rem;color:var(--purple-ink);
+    margin-bottom:16px;display:flex;align-items:center;gap:8px;
+  }
+  .card-title::before{
+    content:"";width:4px;height:18px;border-radius:2px;background:var(--grad);
+  }
+
+  /* ---------- 输入区 ---------- */
+  .field-label{display:block;font-size:.82rem;color:var(--muted);margin:14px 0 6px}
+  input[type=text],input[type=number],select{
+    font:inherit;color:var(--text);
+    background:#FBFAFD;
+    border:1.5px solid var(--line);
+    border-radius:10px;
+    padding:8px 12px;
+    outline:none;
+    transition:border-color .15s, box-shadow .15s;
+    min-width:0;
+  }
+  input:focus,select:focus{
+    border-color:var(--purple);
+    box-shadow:0 0 0 3px rgba(142,127,184,.18);
+    background:#fff;
+  }
+  input::placeholder{color:#B9B3CC}
+
+  .formula-row{display:flex;gap:8px}
+  .formula-row input{flex:1}
+
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  .chip{
+    font:inherit;font-size:.8rem;cursor:pointer;
+    color:var(--purple-deep);
+    background:var(--purple-faint);
+    border:1px solid #DCD4EA;
+    border-radius:999px;padding:3px 12px;
+    transition:all .15s;
+  }
+  .chip:hover{background:var(--purple);color:#fff;border-color:var(--purple)}
+
+  .divider{
+    display:flex;align-items:center;gap:12px;
+    color:var(--muted);font-size:.78rem;
+    margin:20px 0 12px;
+  }
+  .divider::before,.divider::after{content:"";flex:1;height:1px;background:var(--line)}
+
+  .rows-head{
+    display:grid;grid-template-columns:1.4fr 1.1fr 1.3fr 30px;
+    gap:8px;font-size:.76rem;color:var(--muted);
+    margin-bottom:6px;padding:0 2px;
+  }
+  #rows{display:flex;flex-direction:column;gap:8px}
+  .elem-row{
+    display:grid;grid-template-columns:1.4fr 1.1fr 1.3fr 30px;
+    gap:8px;align-items:center;
+  }
+  .elem-row .sym{width:100%}
+  .elem-row .ratio{width:100%}
+  .elem-preview{
+    font-size:.74rem;color:var(--muted);
+    background:var(--purple-faint);
+    border-radius:8px;padding:6px 8px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .elem-preview.ok{color:var(--green-deep);background:var(--green-faint)}
+  .elem-preview.bad{color:var(--danger);background:var(--danger-bg)}
+  .del{
+    width:28px;height:28px;border:none;border-radius:8px;
+    background:transparent;color:#C4BED8;cursor:pointer;font-size:1rem;
+    transition:all .15s;
+  }
+  .del:hover{background:var(--danger-bg);color:var(--danger)}
+
+  .btn{
+    font:inherit;cursor:pointer;border-radius:10px;
+    padding:9px 18px;border:1.5px solid transparent;
+    transition:all .15s;
+  }
+  .btn-add{margin-top:10px;width:100%;color:var(--purple-deep);background:var(--purple-faint);border-color:#DCD4EA}
+  .btn-add:hover{background:#E6E0F2}
+  .btn-ghost{background:#fff;color:var(--purple-deep);border-color:#D5CDE6}
+  .btn-ghost:hover{border-color:var(--purple);color:var(--purple)}
+  .btn-primary{
+    background:var(--grad);color:#fff;font-weight:600;letter-spacing:2px;
+    box-shadow:0 4px 14px rgba(142,127,184,.35);
+  }
+  .btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(142,127,184,.45)}
+  .btn-primary:active{transform:translateY(0)}
+
+  .mass-row{display:flex;gap:8px}
+  .mass-row input{flex:1}
+  .mass-row select{flex:0 0 auto}
+
+  .error{
+    margin-top:14px;
+    background:var(--danger-bg);color:var(--danger);
+    border:1px solid #F0D5D5;border-radius:10px;
+    padding:9px 12px;font-size:.84rem;
+  }
+
+  .actions{display:flex;gap:10px;margin-top:18px}
+  .actions .btn-primary{flex:1}
+
+  /* ---------- 结果区 ---------- */
+  .result-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+  .result-head .card-title{margin-bottom:0}
+  .btn-copy{padding:5px 14px;font-size:.8rem}
+
+  .empty{
+    color:var(--muted);text-align:center;
+    padding:70px 20px;font-size:.9rem;line-height:2;
+    border:1.5px dashed #DCD6EA;border-radius:12px;
+    margin-top:14px;background:#FBFAFD;
+  }
+
+  .stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+  .stat{
+    background:linear-gradient(160deg,var(--purple-faint),#fff 70%);
+    border:1px solid var(--line);border-radius:12px;
+    padding:14px 16px;
+  }
+  .stat:last-child{background:linear-gradient(160deg,var(--green-faint),#fff 70%)}
+  .stat-label{font-size:.78rem;color:var(--muted)}
+  .stat-value{
+    font-size:1.5rem;font-weight:700;color:var(--purple-ink);
+    font-variant-numeric:tabular-nums;word-break:break-all;
+  }
+  .stat-value small{font-size:.8rem;font-weight:400;color:var(--muted);margin-left:2px}
+
+  .bar{
+    display:flex;height:26px;border-radius:9px;overflow:hidden;
+    margin-top:16px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.4);
+  }
+  .bar span{min-width:2px;transition:flex-grow .3s}
+  .legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:10px;font-size:.8rem;color:var(--text)}
+  .legend .dot{
+    display:inline-block;width:10px;height:10px;border-radius:3px;
+    margin-right:5px;vertical-align:-1px;
+  }
+
+  .tbl{width:100%;border-collapse:collapse;margin-top:16px;font-size:.86rem}
+  .tbl th{
+    text-align:right;background:var(--purple-faint);color:var(--purple-ink);
+    padding:8px 10px;font-weight:600;border-bottom:2px solid #DCD4EA;
+  }
+  .tbl th:first-child{text-align:left}
+  .tbl td{
+    padding:8px 10px;border-bottom:1px solid #EFEBF6;
+    text-align:right;font-variant-numeric:tabular-nums;
+  }
+  .tbl td:first-child{text-align:left;font-weight:600}
+  .tbl tfoot td{border-bottom:none;border-top:2px solid #DCD4EA;font-weight:700;color:var(--purple-ink);background:#FBFAFD}
+  .sym-badge{
+    display:inline-flex;align-items:center;gap:7px;
+  }
+  .sym-badge .dot{width:9px;height:9px;border-radius:3px}
+
+  .process{margin-top:16px;font-size:.82rem}
+  .process summary{
+    cursor:pointer;color:var(--purple-deep);user-select:none;
+    padding:6px 0;
+  }
+  .process summary:hover{color:var(--purple)}
+  .process pre{
+    background:#FBFAFD;border:1px solid var(--line);border-radius:10px;
+    padding:12px 14px;overflow-x:auto;
+    font-family:"Cascadia Code",Consolas,monospace;
+    font-size:.78rem;line-height:1.8;color:var(--purple-ink);
+    white-space:pre-wrap;
+  }
+
+  .foot{
+    text-align:center;color:#A9A3BF;font-size:.75rem;margin-top:22px;
+  }
+
+  /* ---------- 窄屏 ---------- */
+  @media (max-width:880px){
+    .grid{grid-template-columns:1fr}
+    .hero{padding:20px 22px}
+    .hero h1{font-size:1.2rem}
+    .rows-head{display:none}
+    .elem-row{grid-template-columns:1.3fr 1fr 30px}
+    .elem-preview{display:none}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="hero">
+    <div class="hero-icon">
+      <svg width="38" height="38" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+        <g stroke="#fff" stroke-width="2" opacity=".95">
+          <ellipse cx="24" cy="24" rx="19" ry="8" transform="rotate(30 24 24)"/>
+          <ellipse cx="24" cy="24" rx="19" ry="8" transform="rotate(-30 24 24)"/>
+          <ellipse cx="24" cy="24" rx="19" ry="8" transform="rotate(90 24 24)"/>
+        </g>
+        <circle cx="24" cy="24" r="4.5" fill="#fff"/>
+        <circle cx="38" cy="16.5" r="2.4" fill="#fff"/>
+        <circle cx="10" cy="31" r="2.4" fill="#fff"/>
+      </svg>
+    </div>
+    <div>
+      <h1>摩尔质量 · 元素质量计算器</h1>
+      <p class="hero-sub">输入物质总质量与各元素物质的量之比，自动求出摩尔质量、各元素质量与质量分数</p>
+    </div>
+  </header>
+
+  <main class="grid">
+
+    <!-- ================= 输入 ================= -->
+    <form class="card input-card" id="calcForm" novalidate>
+      <h2 class="card-title">① 输入</h2>
+
+      <label class="field-label" for="formulaInput">化学式快捷填充（可选）</label>
+      <div class="formula-row">
+        <input id="formulaInput" type="text" autocomplete="off" spellcheck="false"
+               placeholder="如 CuSO4·5H2O、Ca(OH)2、C6H12O6"/>
+        <button type="button" class="btn btn-ghost" id="parseBtn">解析填充</button>
+      </div>
+      <div class="chips" id="chips">
+        <button type="button" class="chip" data-formula="H2O">H₂O</button>
+        <button type="button" class="chip" data-formula="CO2">CO₂</button>
+        <button type="button" class="chip" data-formula="NaCl">NaCl</button>
+        <button type="button" class="chip" data-formula="Ca(OH)2">Ca(OH)₂</button>
+        <button type="button" class="chip" data-formula="CuSO4·5H2O">CuSO₄·5H₂O</button>
+        <button type="button" class="chip" data-formula="C6H12O6">C₆H₁₂O₆</button>
+      </div>
+
+      <div class="divider"><span>或 手动输入元素及比例</span></div>
+
+      <div class="rows-head">
+        <span>元素</span><span>物质的量之比</span><span>摩尔质量</span><span></span>
+      </div>
+      <div id="rows"></div>
+      <button type="button" class="btn btn-add" id="addRowBtn">＋ 添加元素</button>
+
+      <label class="field-label" for="totalMass">物质总质量</label>
+      <div class="mass-row">
+        <input id="totalMass" type="number" step="any" min="0" placeholder="如 18" value="18"/>
+        <select id="unit" aria-label="质量单位">
+          <option value="1" selected>g（克）</option>
+          <option value="0.001">mg（毫克）</option>
+          <option value="1000">kg（千克）</option>
+        </select>
+      </div>
+
+      <div class="error" id="errorBox" hidden></div>
+
+      <div class="actions">
+        <button type="submit" class="btn btn-primary">计 算</button>
+        <button type="button" class="btn btn-ghost" id="resetBtn">清空</button>
+      </div>
+    </form>
+
+    <!-- ================= 结果 ================= -->
+    <section class="card result-card">
+      <div class="result-head">
+        <h2 class="card-title">② 计算结果</h2>
+        <button type="button" class="btn btn-ghost btn-copy" id="copyBtn" hidden>复制结果</button>
+      </div>
+
+      <div class="empty" id="emptyState">
+        填写左侧输入后点击「计算」<br/>这里将显示摩尔质量、各元素质量与质量分数
+      </div>
+
+      <div id="resultBody" hidden>
+        <div class="stats">
+          <div class="stat">
+            <div class="stat-label">摩尔质量 M</div>
+            <div class="stat-value" id="statM">—</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">物质的量 n</div>
+            <div class="stat-value" id="statN">—</div>
+          </div>
+        </div>
+
+        <div class="bar" id="bar"></div>
+        <div class="legend" id="legend"></div>
+
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>元素</th>
+              <th>原子量 (g/mol)</th>
+              <th>个数比</th>
+              <th id="thMass">质量 (g)</th>
+              <th>质量分数</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+          <tfoot id="tfoot"></tfoot>
+        </table>
+
+        <details class="process">
+          <summary>▸ 计算过程</summary>
+          <pre id="processText"></pre>
+        </details>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="foot">
+    元素摩尔质量采用 IUPAC 标准原子量（常见教学取值）· 人工放射性元素取最稳定同位素近似值
+  </footer>
+</div>
+
+<datalist id="elementList"></datalist>
+
+<script>
+'use strict';
+/* ==================================================================
+ * 一、元素周期表数据（符号 中文名 标准原子量 g/mol，按原子序数排列）
+ * ================================================================== */
+const RAW_ELEMENTS = `
+H 氢 1.008
+He 氦 4.0026
+Li 锂 6.94
+Be 铍 9.0122
+B 硼 10.81
+C 碳 12.011
+N 氮 14.007
+O 氧 15.999
+F 氟 18.998
+Ne 氖 20.180
+Na 钠 22.990
+Mg 镁 24.305
+Al 铝 26.982
+Si 硅 28.085
+P 磷 30.974
+S 硫 32.06
+Cl 氯 35.45
+Ar 氩 39.948
+K 钾 39.098
+Ca 钙 40.078
+Sc 钪 44.956
+Ti 钛 47.867
+V 钒 50.942
+Cr 铬 51.996
+Mn 锰 54.938
+Fe 铁 55.845
+Co 钴 58.933
+Ni 镍 58.693
+Cu 铜 63.546
+Zn 锌 65.38
+Ga 镓 69.723
+Ge 锗 72.630
+As 砷 74.922
+Se 硒 78.971
+Br 溴 79.904
+Kr 氪 83.798
+Rb 铷 85.468
+Sr 锶 87.62
+Y 钇 88.906
+Zr 锆 91.224
+Nb 铌 92.906
+Mo 钼 95.95
+Tc 锝 97
+Ru 钌 101.07
+Rh 铑 102.91
+Pd 钯 106.42
+Ag 银 107.87
+Cd 镉 112.41
+In 铟 114.82
+Sn 锡 118.71
+Sb 锑 121.76
+Te 碲 127.60
+I 碘 126.90
+Xe 氙 131.29
+Cs 铯 132.91
+Ba 钡 137.33
+La 镧 138.91
+Ce 铈 140.12
+Pr 镨 140.91
+Nd 钕 144.24
+Pm 钷 145
+Sm 钐 150.36
+Eu 铕 151.96
+Gd 钆 157.25
+Tb 铽 158.93
+Dy 镝 162.50
+Ho 钬 164.93
+Er 铒 167.26
+Tm 铥 168.93
+Yb 镱 173.05
+Lu 镥 174.97
+Hf 铪 178.49
+Ta 钽 180.95
+W 钨 183.84
+Re 铼 186.21
+Os 锇 190.23
+Ir 铱 192.22
+Pt 铂 195.08
+Au 金 196.97
+Hg 汞 200.59
+Tl 铊 204.38
+Pb 铅 207.2
+Bi 铋 208.98
+Po 钋 209
+At 砹 210
+Rn 氡 222
+Fr 钫 223
+Ra 镭 226
+Ac 锕 227
+Th 钍 232.04
+Pa 镤 231
+U 铀 238.03
+Np 镎 237
+Pu 钚 244
+Am 镅 243
+Cm 锔 247
+Bk 锫 247
+Cf 锎 251
+Es 锿 252
+Fm 镄 257
+Md 钔 258
+No 锘 259
+Lr 铹 262
+Rf 𬬻 267
+Db 𬭊 270
+Sg 𬭳 269
+Bh 𬭛 270
+Hs 𬭶 270
+Mt 鿏 278
+Ds 𫟼 281
+Rg 𬬭 281
+Cn 鎶 285
+Nh 鿭 286
+Fl 𫓧 289
+Mc 镆 289
+Lv 鉝 293
+Ts 鿬 294
+Og 鿫 294
+`;
+
+const ELEMENTS = {};   // 符号 → { name, mass, z }
+const CN2SYM = {};     // 中文名 → 符号
+RAW_ELEMENTS.trim().split(/\r?\n/).forEach((line, idx) => {
+  const parts = line.trim().split(/\s+/);
+  if (parts.length < 3) return;
+  const [sym, name, mass] = parts;
+  ELEMENTS[sym] = { name, mass: parseFloat(mass), z: idx + 1 };
+  CN2SYM[name] = sym;
+});
+
+/* ==================================================================
+ * 二、工具函数
+ * ================================================================== */
+
+/* 数字显示：智能有效数字（默认 6 位），去尾零，过大/过小转科学计数 */
+function fmt(x, sig = 6) {
+  if (x === null || x === undefined || !isFinite(x)) return '—';
+  if (x === 0) return '0';
+  if (Math.abs(x) >= 1e7 || Math.abs(x) < 1e-4) {
+    return x.toExponential(3).replace(/\.?0+e/, 'e');
+  }
+  return String(Number(x.toPrecision(sig)));
+}
+
+/* 百分比显示 */
+function fmtPct(w) {
+  const p = w * 100;
+  if (p > 0 && p < 0.01) return p.toExponential(2) + '%';
+  return p.toFixed(2) + '%';
+}
+
+/* 用户输入的元素符号规范化：支持 "cl"、"CL"、"铁" 等写法，失败返回 null */
+function normalizeSym(raw) {
+  const s = String(raw || '').trim();
+  if (!s) return null;
+  if (CN2SYM[s]) return CN2SYM[s];                          // 中文名直填
+  const std = s[0].toUpperCase() + s.slice(1).toLowerCase();
+  return ELEMENTS[std] ? std : null;
+}
+
+/* 比例显示：整数去小数尾 */
+function fmtRatio(x) {
+  return Number.isInteger(x) ? String(x) : String(Number(x.toPrecision(6)));
+}
+
+/* ==================================================================
+ * 大小写容错：按元素符号表对字母串智能分段
+ *   优先保留原样可分段的写法（如 Ca(OH)2 中的 OH 不被改写），
+ *   原样无法分段时才忽略大小写还原（h2o → H2O、nacl → NaCl）
+ * ================================================================== */
+const SYM_LIST = Object.keys(ELEMENTS).sort((a, b) => b.length - a.length);
+function segmentRun(run, ignoreCase) {
+  const n = run.length;
+  const memo = new Array(n + 1);
+  const fold = ignoreCase ? (x => x.toLowerCase()) : (x => x);
+  const target = fold(run);
+  function solve(pos) {
+    if (memo[pos] !== undefined) return memo[pos];
+    if (pos === n) return (memo[pos] = []);
+    let found = null;
+    for (const sym of SYM_LIST) {          /* 符号按长度降序 → 最长优先 */
+      if (target.startsWith(fold(sym), pos)) {
+        const rest = solve(pos + sym.length);
+        if (rest) { found = [sym].concat(rest); break; }
+      }
+    }
+    return (memo[pos] = found);
+  }
+  const seg = solve(0);
+  return seg ? seg.join('') : null;
+}
+function fixCase(run) {
+  if (ELEMENTS[run]) return run;            /* 整段原样即合法符号 */
+  if (segmentRun(run, false)) return run;   /* 原样可分段（OH、CuSO…）→ 保留 */
+  return segmentRun(run, true) || run;      /* 忽略大小写还原；仍失败则交由主流程报错 */
+}
+
+/* ==================================================================
+ * 三、化学式解析（支持括号嵌套、水合物 · 、小写容错）
+ *    "Ca(OH)2" → { Ca:1, O:2, H:2 }
+ * ================================================================== */
+function parseFormula(input) {
+  let s = String(input || '').replace(/\s+/g, '');
+  if (!s) throw new Error('请输入化学式');
+  /* 大小写容错：h2o → H2O、nacl → NaCl（不破坏 OH 等合法写法） */
+  s = s.replace(/[A-Za-z]+/g, w => fixCase(w));
+  /* 各种间隔点统一为 · */
+  s = s.replace(/[·∙•*×]/g, '·');
+
+  let i = 0;
+  function readNumber() {
+    const start = i;
+    while (i < s.length && /[\d.]/.test(s[i])) i++;
+    if (start === i) return null;
+    const v = parseFloat(s.slice(start, i));
+    if (!isFinite(v) || v <= 0) throw new Error('化学式中的数字无效');
+    return v;
+  }
+  function merge(dst, src, mult) {
+    for (const k in src) dst[k] = (dst[k] || 0) + src[k] * mult;
+  }
+  function parseExpr() {
+    const counts = {};
+    while (i < s.length) {
+      const c = s[i];
+      if (c === '(' || c === '[') {
+        i++;
+        const inner = parseExpr();
+        if (s[i] !== ')' && s[i] !== ']') throw new Error('括号不匹配');
+        i++;
+        merge(counts, inner, readNumber() ?? 1);
+      } else if (c === ')' || c === ']') {
+        break;
+      } else if (c === '·') {
+        i++;
+        const mult = readNumber() ?? 1;   // CuSO4·5H2O 中 · 后的系数
+        merge(counts, parseExpr(), mult);
+      } else if (/[A-Z]/.test(c)) {
+        let sym = c; i++;
+        while (i < s.length && /[a-z]/.test(s[i])) sym += s[i++];
+        if (!ELEMENTS[sym]) throw new Error(`未知元素「${sym}」，请检查拼写`);
+        counts[sym] = (counts[sym] || 0) + (readNumber() ?? 1);
+      } else {
+        throw new Error(`无法识别的字符「${c}」`);
+      }
+    }
+    return counts;
+  }
+
+  const result = parseExpr();
+  if (i < s.length) throw new Error('括号不匹配');
+  if (!Object.keys(result).length) throw new Error('化学式为空');
+  return result;
+}
+
+/* ==================================================================
+ * 四、核心计算
+ *    输入 rows: [{sym, ratio}]，totalMassGram: 总质量(克)
+ *    输出 { M, n, items: [{sym, ratio, elemMass, massFrac, massGram}] }
+ * ================================================================== */
+function computeMolarMass(rows, totalMassGram) {
+  /* 合并重复元素 */
+  const merged = {};
+  for (const r of rows) merged[r.sym] = (merged[r.sym] || 0) + r.ratio;
+
+  const items = Object.keys(merged).map(sym => {
+    const ratio = merged[sym];
+    const elemMass = ratio * ELEMENTS[sym].mass;   // 该元素在 1 mol 物质中的总质量
+    return { sym, ratio, elemMass };
+  });
+  const M = items.reduce((s, it) => s + it.elemMass, 0);
+  if (!(M > 0)) throw new Error('摩尔质量为 0，请检查输入');
+  const n = totalMassGram / M;
+  items.forEach(it => {
+    it.massFrac = it.elemMass / M;
+    it.massGram = totalMassGram * it.massFrac;
+  });
+  return { M, n, items };
+}
+
+/* 元素配色：从雾紫 #8E7FB8 (h258) 到豆绿 #A2C9AE (h140) 的和谐插值 */
+function palette(count) {
+  const cols = [];
+  for (let i = 0; i < count; i++) {
+    const t = count === 1 ? 0 : i / (count - 1);
+    const h = 258 + (140 - 258) * t;
+    const s = 28 + 5 * Math.sin(Math.PI * t);
+    const l = 63 + 6 * Math.sin(Math.PI * t);
+    cols.push(`hsl(${h.toFixed(0)}, ${s.toFixed(0)}%, ${l.toFixed(0)}%)`);
+  }
+  return cols;
+}
+
+/* 供 Node 测试环境使用（浏览器中此块被跳过） */
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { ELEMENTS, CN2SYM, fmt, normalizeSym, parseFormula, computeMolarMass };
+}
+
+/* ==================================================================
+ * 五、DOM 交互（仅浏览器执行）
+ * ================================================================== */
+if (typeof document !== 'undefined') {
+
+  const $ = id => document.getElementById(id);
+  const rowsEl = $('rows'), errorBox = $('errorBox');
+
+  /* ---------- datalist：元素候选列表 ---------- */
+  (function fillDatalist() {
+    const dl = $('elementList');
+    const frag = document.createDocumentFragment();
+    for (const sym in ELEMENTS) {
+      const e = ELEMENTS[sym];
+      const opt = document.createElement('option');
+      opt.value = sym;
+      opt.label = `${e.name} · ${e.mass} g/mol · ${e.z}号`;
+      frag.appendChild(opt);
+    }
+    dl.appendChild(frag);
+  })();
+
+  /* ---------- 元素行管理 ---------- */
+  function addRow(sym = '', ratio = 1) {
+    const row = document.createElement('div');
+    row.className = 'elem-row';
+
+    const symInput = document.createElement('input');
+    symInput.className = 'sym';
+    symInput.type = 'text';
+    symInput.setAttribute('list', 'elementList');
+    symInput.setAttribute('autocomplete', 'off');
+    symInput.setAttribute('spellcheck', 'false');
+    symInput.placeholder = '如 H / 铁';
+    symInput.value = sym;
+
+    const ratioInput = document.createElement('input');
+    ratioInput.className = 'ratio';
+    ratioInput.type = 'number';
+    ratioInput.step = 'any';
+    ratioInput.min = '0';
+    ratioInput.placeholder = '如 2';
+    ratioInput.value = ratio === 1 ? (sym ? 1 : '') : ratio;
+
+    const preview = document.createElement('div');
+    preview.className = 'elem-preview';
+    preview.textContent = '—';
+
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'del';
+    del.title = '删除该元素';
+    del.textContent = '✕';
+    del.addEventListener('click', () => row.remove());
+
+    row.append(symInput, ratioInput, preview, del);
+    rowsEl.appendChild(row);
+
+    const update = () => {
+      const raw = symInput.value.trim();
+      if (!raw) { preview.textContent = '—'; preview.className = 'elem-preview'; return; }
+      const s = normalizeSym(raw);
+      if (s) {
+        preview.textContent = `${ELEMENTS[s].name} · ${ELEMENTS[s].mass} g/mol`;
+        preview.className = 'elem-preview ok';
+      } else {
+        preview.textContent = '未知元素';
+        preview.className = 'elem-preview bad';
+      }
+    };
+    symInput.addEventListener('input', update);
+    symInput.addEventListener('blur', () => {
+      const s = normalizeSym(symInput.value);
+      if (s) symInput.value = s;
+      update();
+    });
+    update();
+    return row;
+  }
+
+  $('addRowBtn').addEventListener('click', () => addRow());
+
+  /* ---------- 错误提示 ---------- */
+  function showError(msg) {
+    errorBox.textContent = msg;
+    errorBox.hidden = false;
+  }
+  function clearError() { errorBox.hidden = true; }
+
+  /* ---------- 化学式快捷填充 ---------- */
+  function applyFormula(formula) {
+    try {
+      const counts = parseFormula(formula);
+      rowsEl.innerHTML = '';
+      Object.keys(counts).forEach(sym => addRow(sym, counts[sym]));
+      clearError();
+    } catch (e) {
+      showError(e.message);
+    }
+  }
+  $('parseBtn').addEventListener('click', () => applyFormula($('formulaInput').value));
+  $('formulaInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); applyFormula($('formulaInput').value); }
+  });
+  $('chips').addEventListener('click', e => {
+    const chip = e.target.closest('.chip');
+    if (!chip) return;
+    $('formulaInput').value = chip.dataset.formula;
+    applyFormula(chip.dataset.formula);
+  });
+
+  /* ---------- 计算 ---------- */
+  let lastSummary = '';
+
+  function calculate() {
+    clearError();
+
+    /* 收集并校验元素行 */
+    const rows = [];
+    const rowEls = rowsEl.querySelectorAll('.elem-row');
+    rowEls.forEach((row, idx) => {
+      const sym = normalizeSym(row.querySelector('.sym').value);
+      const ratioRaw = row.querySelector('.ratio').value;
+      if (!sym) { showError(`第 ${idx + 1} 行：请输入有效元素符号（可在下拉中选择）`); return; }
+      const ratio = parseFloat(ratioRaw);
+      if (!isFinite(ratio) || ratio <= 0) { showError(`第 ${idx + 1} 行：比例需为正数`); return; }
+      rows.push({ sym, ratio });
+    });
+    if (errorBox.hidden === false) return;
+    if (!rows.length) { showError('请至少添加一个元素'); return; }
+
+    /* 校验总质量 */
+    const massRaw = parseFloat($('totalMass').value);
+    if (!isFinite(massRaw) || massRaw <= 0) { showError('请输入有效的物质总质量（大于 0）'); return; }
+    const factor = parseFloat($('unit').value);      // 所选单位 → 克
+    const massGram = massRaw * factor;
+    const unitName = factor === 1 ? 'g' : factor === 0.001 ? 'mg' : 'kg';
+
+    /* 核心计算 */
+    const { M, n, items } = computeMolarMass(rows, massGram);
+    const colors = palette(items.length);
+
+    /* --- 顶部统计 --- */
+    $('statM').innerHTML = '';
+    $('statM').append(fmt(M), Object.assign(document.createElement('small'), { textContent: ' g/mol' }));
+    $('statN').innerHTML = '';
+    $('statN').append(fmt(n), Object.assign(document.createElement('small'), { textContent: ' mol' }));
+
+    /* --- 占比条 + 图例 --- */
+    const bar = $('bar'), legend = $('legend');
+    bar.innerHTML = ''; legend.innerHTML = '';
+    items.forEach((it, i) => {
+      const seg = document.createElement('span');
+      seg.style.flexGrow = String(Math.max(it.massFrac, 0.004));   // 极小片段也给最小可见宽度
+      seg.style.background = colors[i];
+      seg.title = `${it.sym}（${ELEMENTS[it.sym].name}）${fmtPct(it.massFrac)}`;
+      bar.appendChild(seg);
+
+      const li = document.createElement('span');
+      const dot = document.createElement('i');
+      dot.className = 'dot';
+      dot.style.background = colors[i];
+      li.append(dot, document.createTextNode(
+        `${it.sym} ${fmtPct(it.massFrac)}`));
+      legend.appendChild(li);
+    });
+
+    /* --- 表格 --- */
+    $('thMass').textContent = `质量 (${unitName})`;
+    const tbody = $('tbody'); tbody.innerHTML = '';
+    items.forEach((it, i) => {
+      const tr = document.createElement('tr');
+      const tdSym = document.createElement('td');
+      const badge = document.createElement('span');
+      badge.className = 'sym-badge';
+      const dot = document.createElement('i');
+      dot.className = 'dot';
+      dot.style.background = colors[i];
+      badge.append(dot, document.createTextNode(`${it.sym}（${ELEMENTS[it.sym].name}）`));
+      tdSym.appendChild(badge);
+
+      const tdAtomic = document.createElement('td');
+      tdAtomic.textContent = fmt(ELEMENTS[it.sym].mass);
+      const tdRatio = document.createElement('td');
+      tdRatio.textContent = fmtRatio(it.ratio);
+      const tdMass = document.createElement('td');
+      tdMass.textContent = fmt(it.massGram / factor);
+      const tdFrac = document.createElement('td');
+      tdFrac.textContent = fmtPct(it.massFrac);
+
+      tr.append(tdSym, tdAtomic, tdRatio, tdMass, tdFrac);
+      tbody.appendChild(tr);
+    });
+    const tfoot = $('tfoot'); tfoot.innerHTML = '';
+    const trF = document.createElement('tr');
+    ['合计', fmt(M), '—', `${fmt(massGram / factor)} ${unitName}`, '100.00%'].forEach((t, i) => {
+      const td = document.createElement('td');
+      td.textContent = t;
+      trF.appendChild(td);
+    });
+    tfoot.appendChild(trF);
+
+    /* --- 计算过程 --- */
+    const terms = items.map(it => `${fmtRatio(it.ratio)}×${fmt(ELEMENTS[it.sym].mass)}`).join(' + ');
+    const lines = [];
+    lines.push(`摩尔质量：M = ${terms} = ${fmt(M)} g/mol`);
+    lines.push(`物质的量：n = m ÷ M = ${fmt(massGram)} g ÷ ${fmt(M)} g/mol ≈ ${fmt(n)} mol`);
+    items.forEach(it => {
+      lines.push(`m(${it.sym}) = ${fmt(massGram)} g × (${fmtRatio(it.ratio)}×${fmt(ELEMENTS[it.sym].mass)} ÷ ${fmt(M)}) ≈ ${fmt(it.massGram)} g（${fmtPct(it.massFrac)}）`);
+    });
+    $('processText').textContent = lines.join('\n');
+
+    /* --- 摘要（复制用） --- */
+    const ratioStr = items.map(it => `${it.sym}×${fmtRatio(it.ratio)}`).join(' : ');
+    lastSummary =
+      `【摩尔质量计算结果】\n` +
+      `元素比例：${ratioStr}\n` +
+      `摩尔质量 M = ${fmt(M)} g/mol\n` +
+      `总质量 ${fmt(massGram / factor)} ${unitName} → 物质的量 n ≈ ${fmt(n)} mol\n` +
+      items.map(it =>
+        `${it.sym}（${ELEMENTS[it.sym].name}）：${fmt(it.massGram / factor)} ${unitName}，占 ${fmtPct(it.massFrac)}`
+      ).join('\n');
+
+    $('emptyState').hidden = true;
+    $('resultBody').hidden = false;
+    $('copyBtn').hidden = false;
+  }
+
+  $('calcForm').addEventListener('submit', e => { e.preventDefault(); calculate(); });
+
+  /* ---------- 清空 ---------- */
+  $('resetBtn').addEventListener('click', () => {
+    rowsEl.innerHTML = '';
+    addRow(); addRow();
+    $('totalMass').value = '';
+    $('formulaInput').value = '';
+    $('resultBody').hidden = true;
+    $('copyBtn').hidden = true;
+    $('emptyState').hidden = false;
+    clearError();
+  });
+
+  /* ---------- 复制结果 ---------- */
+  $('copyBtn').addEventListener('click', async () => {
+    const btn = $('copyBtn');
+    try {
+      await navigator.clipboard.writeText(lastSummary);
+    } catch {
+      /* 剪贴板 API 不可用时的回退 */
+      const ta = document.createElement('textarea');
+      ta.value = lastSummary;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      ta.remove();
+    }
+    const old = btn.textContent;
+    btn.textContent = '✓ 已复制';
+    setTimeout(() => { btn.textContent = old; }, 1200);
+  });
+
+  /* ---------- 初始化：预填 H₂O 示例并自动计算 ---------- */
+  addRow('H', 2);
+  addRow('O', 1);
+  calculate();
+}
+</script>
+</body>
+</html>
